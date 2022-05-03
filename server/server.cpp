@@ -6,12 +6,13 @@
 #include<pthread.h>
 #include<stdio.h>
 #include"../head/chatroom.h"
+#include"../head/protocol.h"
 
 #define SERVER_IP "10.0.0.2" //ip地址
 #define SERVER_PORT 3000 //端口号
 
 chatroom room;
-void* client_proc(void* arg);
+void *client_proc(void* arg);
 
 int main()
 {
@@ -48,18 +49,62 @@ int main()
         cliaddr_len = sizeof(cliaddr);
         connfd = accept(sockfd, (sockaddr*)&cliaddr, &cliaddr_len);
         pthread_t tid;
-        pthread_create(&tid, NULL, (void *)client_proc, (void*)&connfd);
+        pthread_create(&tid, NULL, client_proc, (void*)&connfd);
         pthread_detach(tid);
     }
 }
 
 //线程函数
-void* client_proc(void* arg)
+void *client_proc(void* arg)
 {
     int connfd = *(int *)arg;
-
+    uint8_t buf;
+    Protocol_t msg;
     while(1)
     {
+        read(sockfd, &buf, 1);
+        if(pro_msg_parse(buf, &msg))
+        {
+            process_msg(&msg, sockfd);
+            if(msg.username)
+            {
+                free(msg.username);
+                msg.username = NULL;
+            }
+            if(msg.load)
+            {
+                free(msg.load);
+                msg.load = NULL;
+            }
+        }
+    }
+}
 
+void process_msg(Protocol_t* msg, int sockfd)
+{
+    switch (msg->id)
+    {
+    case PRO_ID_CONNECT:
+        
+        break;
+    case PRO_ID_CHATTEXT:
+        Pro_chattext_t chat_msg;
+        pro_msg_chattext_decode(msg, &chat_msg);
+        if(strcmp(chat_msg.username, username) != 0)
+            printf("%s:%s\n", chat_msg.username, chat_msg.text);
+        if(chat_msg.text)
+        {
+            free(chat_msg.text);
+            chat_msg.text = NULL;
+        }
+        if(chat_msg.username)
+        {
+            free(chat_msg.username);
+            chat_msg.username = NULL;
+        }
+        break;
+    
+    default:
+        break;
     }
 }
