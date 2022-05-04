@@ -77,7 +77,15 @@ bool SendUsername(int sockfd, char* username, uint8_t* buf, int buflen, Protocol
     pro_msg_connect_pack(msg, username);
     buflen = pro_msg_send_buf(buf, msg);
     write(sockfd, buf, buflen);
-    free(buf);
+    if(buf)
+    {
+        free(buf); buf = NULL;
+    }
+    if(msg->load)
+    {
+        free(msg->load); msg->load = NULL;
+    }
+
     buf = (uint8_t*)malloc(sizeof(uint8_t) * PRO_MSG_ANSWER_lEN);
     buflen = read(sockfd, buf, PRO_MSG_ANSWER_lEN);
 
@@ -85,7 +93,10 @@ bool SendUsername(int sockfd, char* username, uint8_t* buf, int buflen, Protocol
     {
         if(pro_msg_parse(buf[i], msg))
         {
-            free(buf);
+            if(buf)
+            {
+                free(buf); buf = NULL;
+            }
             if(pro_msg_answer_decode(msg, &answer_msg))
             {
                 if(1 == answer_msg.answer)
@@ -101,8 +112,10 @@ bool SendUsername(int sockfd, char* username, uint8_t* buf, int buflen, Protocol
             }
         }
     }
-    free(buf);
-    buf = NULL;
+    if(buf)
+    {
+        free(buf); buf = NULL;
+    }
     printf("登陆失败!\n");
     return false;
 }
@@ -119,26 +132,16 @@ void *ReadServer(void* arg)
         if(pro_msg_parse(buf, &msg))
         {
             process_msg(&msg, sockfd);
-            if(msg.username)
-            {
-                free(msg.username);
-                msg.username = NULL;
-            }
-            if(msg.load)
-            {
-                free(msg.load);
-                msg.load = NULL;
-            }
         }
     }
 }
 
 void process_msg(Protocol_t* msg, int sockfd)
 {
+    Pro_chattext_t chat_msg;
     switch (msg->id)
     {
     case PRO_ID_CHATTEXT:
-        Pro_chattext_t chat_msg;
         pro_msg_chattext_decode(msg, &chat_msg);
         if(strcmp(chat_msg.username, username) != 0)
             printf("%s:%s\n", chat_msg.username, chat_msg.text);
@@ -166,11 +169,6 @@ void process_text(char* text, int sockfd, Protocol_t* msg, int buflen, uint8_t* 
         pro_msg_chattext_pack(msg, username, text);
         buflen = pro_msg_send_buf(buf, msg);
         write(sockfd, buf, buflen);
-        if(msg->username)
-        {
-            free(msg->username);
-            msg->username = NULL;
-        }
         if(msg->load)
         {
             free(msg->load);

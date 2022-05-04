@@ -12,13 +12,17 @@
 #define SERVER_PORT 3000 //端口号
 
 chatroom room;
+char servername[] = "server";
+
 void *client_proc(void* arg);
+void process_msg(Protocol_t* msg, int connfd);
 
 int main()
 {
     int sockfd = -1, connfd = -1;
     sockaddr_in servaddr, cliaddr;
     socklen_t cliaddr_len;
+    char str[INET_ADDRSTRLEN];
 
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);//设置ip地址，使用这个宏定义好像可以自动分配，如果到时候不行的话可以手动填一下（字符串）
@@ -42,12 +46,15 @@ int main()
 
     //初始化聊天室
     init_chatroom(&room);
+    
+    printf("等待用户连接中......\n");
 
     //主循环
     while(1)
     {
         cliaddr_len = sizeof(cliaddr);
         connfd = accept(sockfd, (sockaddr*)&cliaddr, &cliaddr_len);
+        printf("%s:%d已连接到服务器\n", inet_ntop(AF_INET, &cliaddr.sin_addr, str, sizeof(str)), ntohs(cliaddr.sin_port));
         pthread_t tid;
         pthread_create(&tid, NULL, client_proc, (void*)&connfd);
         pthread_detach(tid);
@@ -62,45 +69,104 @@ void *client_proc(void* arg)
     Protocol_t msg;
     while(1)
     {
-        read(sockfd, &buf, 1);
+        read(connfd, &buf, 1);
         if(pro_msg_parse(buf, &msg))
         {
-            process_msg(&msg, sockfd);
-            if(msg.username)
-            {
-                free(msg.username);
-                msg.username = NULL;
-            }
-            if(msg.load)
-            {
-                free(msg.load);
-                msg.load = NULL;
-            }
+            process_msg(&msg, connfd);
         }
     }
 }
 
-void process_msg(Protocol_t* msg, int sockfd)
+void process_msg(Protocol_t* msg, int connfd)
 {
+    uint8_t* buf = NULL;
+    char* text = NULL;
+    int buflen = 0;
+    Pro_connect_t conn_msg;
     switch (msg->id)
     {
     case PRO_ID_CONNECT:
+        pro_msg_connect_decode(msg, &conn_msg);
+        if(add_user(&room, conn_msg.username, connfd))
+        {
+            pro_msg_answer_pack(msg, servername, 1);
+            buflen = pro_msg_send_buf(buf, msg);
+            write(connfd, buf, buflen);
+            if(buf)
+            {
+                free(buf);
+                buf = NULL;
+            }
+
+            text = (char*)malloc(sizeof(char) * (strlen(conn_msg.username) + strlen("加入了聊天室\n")));
+            sprintf(text, "%s%s", conn_msg.username, "加入了聊天室\n");
+            pro_msg_chattext_pack(msg, servername, text);
+            buflen = pro_msg_send_buf(buf, msg);
+            SendMsgToAllClients(&room, buf, buflen);
+
+            if(buf)
+            {
+                free(buf);
+                buf = NULL;
+            }
+            if(msg->username)
+            {
+                free(msg->username); msg->username = NULL;
+            }
+            if(msg->load)
+            {
+                free(msg->load); msg->load = NULL;
+            }
+        }
+        else
+        {
+            pro_msg_answer_pack(msg, servername, 0);
+            buflen = pro_msg_send_buf(buf, msg);
+            write(connfd, buf, buflen);
+            if(buf)
+            {
+                free(buf);
+                buf = NULL;
+            }           
+
+            text = "用户名已存在!\n";
+            pro_msg_chattext_pack(msg, servername, text);
+            buflen = pro_msg_send_buf(buf, msg);
+            write(connfd, buf, buflen);
+            if(buf)
+            {
+                free(buf);
+                buf = NULL;
+            }
+            if(msg->username)
+            {
+                free(msg->username); msg->username = NULL;
+            }
+            if(msg->load)
+            {
+                free(msg->load); msg->load = NULL;
+            }
+            close(connfd);
+        }
+        
         
         break;
     case PRO_ID_CHATTEXT:
-        Pro_chattext_t chat_msg;
-        pro_msg_chattext_decode(msg, &chat_msg);
-        if(strcmp(chat_msg.username, username) != 0)
-            printf("%s:%s\n", chat_msg.username, chat_msg.text);
-        if(chat_msg.text)
+        buflen = pro_msg_send_buf(buf, msg);
+        SendMsgToAllClients(&room, buf, buflen);
+
+        if(buf)
         {
-            free(chat_msg.text);
-            chat_msg.text = NULL;
+            free(buf);
+            buf = NULL;
         }
-        if(chat_msg.username)
+        if(msg->username)
         {
-            free(chat_msg.username);
-            chat_msg.username = NULL;
+            free(msg->username); msg->username = NULL;
+        }
+        if(msg->load)
+        {
+            free(msg->load); msg->load = NULL;
         }
         break;
     

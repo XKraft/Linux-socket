@@ -74,17 +74,25 @@ bool pro_msg_parse(uint8_t byte, Protocol_t* msg)
                 break;
             case 2:
                 _p.len = *((int*)p); lenarray[4] = _p.len;
+                break;
             case 3:
                 _p.username = (char*)p;
+                break;
             case 4:
                 _p.load = p;
+                break;
             default:
                 break;
             }
             ++j;
             i = 0;
-            if (j < 5)
+            if (j < 5 && lenarray[j] != 0)
             {
+                if(j < 3)
+                    if (p)
+                    {
+                        free(p); p = NULL;
+                    }
                 p = (uint8_t*)malloc(sizeof(uint8_t) * lenarray[j]);
                 p[i++] = byte;
                 return false;
@@ -93,7 +101,7 @@ bool pro_msg_parse(uint8_t byte, Protocol_t* msg)
             {
                 flag = false;
                 if (byte == 0xFD)
-                {    
+                {
                     *msg = _p;
                     return true;
                 }
@@ -137,6 +145,14 @@ bool pro_msg_answer_decode(Protocol_t* msg, Pro_answer_t* _msg)
     if(msg->id == PRO_ID_ANSWER)
     {
         _msg->answer = (bool)(*msg->load);
+        if(msg->username)
+        {
+            free(msg->username); msg->username = NULL;
+        }
+        if(msg->load)
+        {
+            free(msg->load); msg->load =NULL;
+        }
         return true;
     }
     return false;
