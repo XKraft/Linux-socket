@@ -52,6 +52,19 @@ typedef struct Pro_chattext_t
     char* text;
 } Pro_chattext_t;
 
+typedef struct Pro_command_t
+{
+    char* username;
+    char* text;
+} Pro_command_t;
+
+typedef struct Pro_sendfile_t
+{
+    char* filename;
+    int file_size;
+    char* fileload;
+} Pro_sendfile_t;
+
 extern bool pro_msg_parse(uint8_t byte, Protocol_t* msg);
 extern int pro_msg_send_buf(uint8_t* &buf, Protocol_t* msg);
 
@@ -64,13 +77,13 @@ extern bool pro_msg_answer_decode(Protocol_t* msg, Pro_answer_t* _msg);
 extern void pro_msg_chattext_pack(Protocol_t* msg, char* username, char* text);
 extern bool pro_msg_chattext_decode(Protocol_t* msg, Pro_chattext_t* _msg);
 
-// extern bool pro_msg_sendfile_pack(Protocol_t* msg, char* username, MSG_ID id);
-// extern bool pro_msg_sendfile_decode(Protocol_t* msg, Pro_connect_t* _msg);
+extern void pro_msg_sendfile_pack(Protocol_t* msg, char* filename, char* buf, int file_size);
+extern bool pro_msg_sendfile_decode(Protocol_t* msg, Pro_sendfile_t* _msg);
 
 // extern bool pro_msg_downloadfile_pack(Protocol_t* msg, char* username, MSG_ID id);
 // extern bool pro_msg_downloadfile_decode(Protocol_t* msg, Pro_connect_t* _msg);
 
-// extern bool pro_msg_command_pack(Protocol_t* msg, char* username, MSG_ID id);
-// extern bool pro_msg_command_decode(Protocol_t* msg, Pro_connect_t* _msg);
+extern void pro_msg_command_pack(Protocol_t* msg, char* username, char* text);
+extern bool pro_msg_command_decode(Protocol_t* msg, Pro_command_t* _msg);
 
 #endif

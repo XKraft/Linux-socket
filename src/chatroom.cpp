@@ -70,23 +70,23 @@ void SendMsgToAllClients(chatroom* room, uint8_t* buf, int len)
         head = head->next_user;
     }
 }
-// //删除用户
-// void remove_user(chatroom* room, string name)
-// {
-//     user_node* head = room->user_head;
-//     user_node* p = NULL;
-//     while(head->next_user != NULL)
-//     {
-//         p = head->next_user;
-//         if(p->name == name) break;
-//         head = p;
-//     }
-//     head->next_user = p->next_user;
-//     room->number -= 1;
-//     delete p;
-//     cout<<"已删除用户"<<name<<endl;
-//     head = p = NULL;
-// }
+//删除用户
+void remove_user(chatroom* room, string name)
+{
+    user_node* head = room->user_head;
+    user_node* p = NULL;
+    while(head->next_user != NULL)
+    {
+        p = head->next_user;
+        if(p->name == name) break;
+        head = p;
+    }
+    head->next_user = p->next_user;
+    room->number -= 1;
+    cout << "已删除用户"<< name <<endl;
+    delete p;
+    head = p = NULL;
+}
 
 // //查找文件
 // file_node* find_file(chatroom* room, string filename)

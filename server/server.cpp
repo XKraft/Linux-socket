@@ -83,6 +83,7 @@ void process_msg(Protocol_t* msg, int connfd)
     char* text = NULL;
     int buflen = 0;
     Pro_connect_t conn_msg;
+    Pro_command_t comm_msg;
     switch (msg->id)
     {
     case PRO_ID_CONNECT:
@@ -99,7 +100,7 @@ void process_msg(Protocol_t* msg, int connfd)
             }
 
             text = (char*)malloc(sizeof(char) * (strlen(conn_msg.username) + strlen("加入了聊天室\n")));
-            sprintf(text, "%s%s", conn_msg.username, "加入了聊天室\n");
+            sprintf(text, "%s%s", conn_msg.username, "加入了聊天室");
             pro_msg_chattext_pack(msg, servername, text);
             buflen = pro_msg_send_buf(buf, msg);
             SendMsgToAllClients(&room, buf, buflen);
@@ -108,10 +109,6 @@ void process_msg(Protocol_t* msg, int connfd)
             {
                 free(buf);
                 buf = NULL;
-            }
-            if(msg->username)
-            {
-                free(msg->username); msg->username = NULL;
             }
             if(msg->load)
             {
@@ -138,14 +135,6 @@ void process_msg(Protocol_t* msg, int connfd)
                 free(buf);
                 buf = NULL;
             }
-            if(msg->username)
-            {
-                free(msg->username); msg->username = NULL;
-            }
-            if(msg->load)
-            {
-                free(msg->load); msg->load = NULL;
-            }
             close(connfd);
         }
         
@@ -154,7 +143,7 @@ void process_msg(Protocol_t* msg, int connfd)
     case PRO_ID_CHATTEXT:
         buflen = pro_msg_send_buf(buf, msg);
         SendMsgToAllClients(&room, buf, buflen);
-
+        printf("收到一条消息\n");
         if(buf)
         {
             free(buf);
@@ -170,6 +159,36 @@ void process_msg(Protocol_t* msg, int connfd)
         }
         break;
     
+    case PRO_ID_COMMAND:
+        pro_msg_command_decode(msg, &comm_msg);
+        if(strcmp(comm_msg.text, "/exit") == 0)
+        {
+            pro_msg_command_pack(msg, servername, "/exit_ok");
+            buflen = pro_msg_send_buf(buf, msg);
+            write(connfd, buf, buflen);
+            remove_user(&room, comm_msg.username);
+            if(buf)
+            {
+                free(buf); buf = NULL;
+            }
+            text = (char*)malloc(sizeof(char) * (strlen(comm_msg.username) + strlen("退出了聊天室\n")));
+            sprintf(text, "%s%s", comm_msg.username, "退出了聊天室");
+            pro_msg_chattext_pack(msg, servername, text);
+            buflen = pro_msg_send_buf(buf, msg);
+            SendMsgToAllClients(&room, buf, buflen);
+            if(buf)
+            {
+                free(buf); buf = NULL;
+            }
+            if(msg->load)
+            {
+                free(msg->load); msg->load = NULL;
+            }
+            close(connfd);
+            pthread_exit((void*)0);
+        }
+        break;
+
     default:
         break;
     }

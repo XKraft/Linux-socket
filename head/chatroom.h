@@ -35,8 +35,8 @@ extern void init_chatroom(chatroom* room);
 extern bool add_user(chatroom* room, string name, int userfd);
 //向所有人发送消息
 extern void SendMsgToAllClients(chatroom* room, uint8_t* buf, int len);
-// //删除用户
-// extern void remove_user(chatroom* room, string name);
+//删除用户
+extern void remove_user(chatroom* room, string name);
 // //接收&保存文件->将字符数组写入文件
 // extern void save_file(chatroom* room, uint8_t* str, int len, string filename);
 // //发送文件->将服务端文件写入字符数组

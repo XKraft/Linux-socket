@@ -180,3 +180,48 @@ bool pro_msg_chattext_decode(Protocol_t* msg, Pro_chattext_t* _msg)
     }
     return false;
 }
+
+void pro_msg_command_pack(Protocol_t* msg, char* username, char* text)
+{
+    msg->id = PRO_ID_COMMAND;
+    msg->username = username;
+    msg->username_len = strlen(username);
+    msg->load = (uint8_t*)text;
+    msg->len = strlen(text) * sizeof(char) / sizeof(uint8_t);
+}
+bool pro_msg_command_decode(Protocol_t* msg, Pro_command_t* _msg)
+{
+    if(msg->id == PRO_ID_COMMAND)
+    {
+        _msg->username = msg->username;
+        _msg->username = (char*)realloc(_msg->username, msg->username_len + 1);
+        _msg->username[msg->username_len] = '\0';
+        _msg->text = (char*)msg->load;
+        _msg->text = (char*)realloc(_msg->text, msg->len * sizeof(uint8_t) / sizeof(char) + 1);
+        _msg->text[msg->len * sizeof(uint8_t) / sizeof(char)] = '\0';
+        return true;
+    }
+    return false;
+}
+
+void pro_msg_sendfile_pack(Protocol_t* msg, char* filename, char* buf, int file_size)
+{
+    msg->id = PRO_ID_SENDFILE;
+    msg->username = filename;
+    msg->username_len = strlen(filename);
+    msg->load = (uint8_t*)buf;
+    msg->len = file_size * sizeof(char) / sizeof(uint8_t);
+}
+bool pro_msg_sendfile_decode(Protocol_t* msg, Pro_sendfile_t* _msg)
+{
+    if (msg->id == PRO_ID_SENDFILE)
+    {
+        _msg->fileload = (char*)msg->load;
+        _msg->file_size = msg->len * sizeof(uint8_t) / sizeof(char);
+        _msg->filename = msg->username;
+        _msg->filename = (char*)realloc(_msg->filename, msg->username_len + 1);
+        _msg->filename[msg->username_len] = '\0';
+        return true;
+    }
+    return 0;
+}
