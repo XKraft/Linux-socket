@@ -13,6 +13,23 @@ void init_chatroom(chatroom* room)
     room->file_head = new file_node;
     room->file_head->filename = "";
     room->file_head->next_file = NULL;
+
+    FILE* fp = fopen("filelist.txt", "r");
+    if(!fp)
+    {
+        printf("文件列表打开错误\n");
+        exit(-1);
+    }
+    char* filename;
+    fscanf(fp, "%s", filename);
+    while(!feof(fp))
+    {
+        fscanf(fp, "%s", filename);
+        file_node* temp = new file_node;
+        temp->filename = filename;
+        temp->next_file = room->file_head->next_file;
+        room->file_head->next_file = temp;
+    }
 }
 
 //增加用户的同时判断是否重复
@@ -144,7 +161,7 @@ int SendFile(chatroom* room, string filename, char*& file_buf)
 
         fseek(fp, 0, SEEK_END);
         int file_size = ftell(fp);
-        char* file_buf = (char*)malloc(sizeof(char) * file_size);
+        file_buf = (char*)malloc(sizeof(char) * file_size);
         memset(file_buf, '\0', file_size * sizeof(char));
         fseek(fp, 0, SEEK_SET);
         fread(file_buf, sizeof(char), file_size, fp);
@@ -166,6 +183,8 @@ char* SendFileList(chatroom* room)
         filelist.append(" ");
         head = head->next_file;
     }
-    return const_cast<char *>(filelist.c_str());
+    char* _filelist = (char*)malloc(sizeof(char) * (filelist.length() + 1));
+    strcpy(_filelist, filelist.c_str());
+    return _filelist;
 }
 
