@@ -15,20 +15,6 @@ void init_chatroom(chatroom* room)
     room->file_head->next_file = NULL;
 }
 
-// //查找用户
-// user_node* find_user(chatroom* room, string name)
-// {
-//     user_node* head = room->user_head;
-//     user_node* p = NULL;
-//     while(head->next_user != NULL)
-//     {
-//         p = head->next_user;
-//         if(p->name == name) break;
-//         head = p;
-//     }
-//     return p;
-// }
-
 //增加用户的同时判断是否重复
 bool add_user(chatroom* room, string name, int userfd)
 {
@@ -84,48 +70,28 @@ void remove_user(chatroom* room, string name)
     head = p = NULL;
 }
 
-// //查找文件
-// file_node* find_file(chatroom* room, string filename)
-// {
-//     file_node* head = room->file_head;
-//     file_node* p = NULL;
-//     while(head->next_file != NULL)
-//     {
-//         p = head->next_file;
-//         if(p->filename == filename) break;
-//         head = p;
-//     }
-//     return p;
-// }
-
-// //从本地打开文件并发送
-// uint8_t* send_file(chatroom* room, string filename)
-// {
-//     string file_path = "./file_dir" + filename;
-//     ifstream ifs;
-//     ifs.open(file_path, ios::in);
-//     if(!ifs.is_open())
-//     {
-//         cout<<"open file failed...";
-//         return 0;
-//     }
-//     uint8_t* str = new uint8_t;
-//     int num = 0;
-//     char c;
-//     while((c = ifs.get()) != EOF)
-//     {
-//         *(str+(num++)) = (uint8_t)c;
-//     }
-//     return str;
-// }
+//查找文件目录里是否有这个文件，如果有则返回true
+bool FindFile(chatroom* room, string filename)
+{
+    file_node* head = room->file_head;
+    while(head->next_file)
+    {
+        if(filename == head->next_file->filename)
+            return true;
+        head = head->next_file;
+    }
+    return false;
+}
 
 //将文件保存到服务区的file文件夹，并更新文件目录和目录文件
 void SaveFile(chatroom* room, string filename, int file_size, char* fileload)
 {
     //将文件保存到本地file文件夹
-    char* file = (char*)malloc(sizeof(char) * (strlen("./file/") + filename.length()));
-    sprintf(file, "%s%s", "./file/", filename.c_str());
-    FILE* fp = fopen(file, "wb"); 
+    //char* file = (char*)malloc(sizeof(char) * (strlen("./file/") + filename.length()));
+    //sprintf(file, "%s%s", "./file/", filename.c_str());
+    string file = "./file/";
+    file.append(filename);
+    FILE* fp = fopen(file.c_str(), "wb"); 
     if(!fp)
     {
         printf("文件打开错误\n");
@@ -133,21 +99,16 @@ void SaveFile(chatroom* room, string filename, int file_size, char* fileload)
     }
     fwrite(fileload, sizeof(char), file_size, fp);
     fclose(fp);
-    printf("文件%s已保存\n", filename);
+    printf("文件%s已保存\n", filename.c_str());
 
     //更新聊天室文件目录
-    file_node* head = room->file_head;
-    while(head->next_file)
-    {
-        if(filename == head->next_file->filename)
-            return;
-        head = head->next_file;
-    }
+    if(FindFile(room, filename))
+        return;
     file_node* temp = new file_node;
     temp->filename = filename;
     temp->next_file = room->file_head->next_file;
     room->file_head->next_file = temp;
-    head = temp = NULL;
+    temp = NULL;
     
     //更新文件目录文件
     fp = fopen("filelist.txt", "w");
@@ -156,13 +117,55 @@ void SaveFile(chatroom* room, string filename, int file_size, char* fileload)
         printf("文件列表打开错误\n");
         exit(-1);
     }
-    head = room->file_head;
+    file_node* head = room->file_head;
     while(head->next_file)
     {
-        fprintf(fp, "%s\n", head->next_file->filename);
+        fprintf(fp, "%s\n", head->next_file->filename.c_str());
         head = head->next_file;
     }
     head = NULL;
     fclose(fp);
     printf("文件目录已更新\n");
 }
+
+//读取文件内容，将其存入file_buf中，返回文件大小file_size
+int SendFile(chatroom* room, string filename, char*& file_buf)
+{
+    if(FindFile(room, filename))
+    {
+        string file = "./file/";
+        file.append(filename);
+        FILE* fp = fopen(file.c_str(), "rb");
+        if (!fp)
+        {
+            printf("文件打开错误\n");
+            return -1;
+        }
+
+        fseek(fp, 0, SEEK_END);
+        int file_size = ftell(fp);
+        char* file_buf = (char*)malloc(sizeof(char) * file_size);
+        memset(file_buf, '\0', file_size * sizeof(char));
+        fseek(fp, 0, SEEK_SET);
+        fread(file_buf, sizeof(char), file_size, fp);
+        fclose(fp);
+
+        return file_size;   
+    }
+    else
+        return -1;
+}
+
+char* SendFileList(chatroom* room)
+{
+    string filelist;
+    file_node* head = room->file_head;
+    while(head->next_file)
+    {
+        filelist += head->next_file->filename;
+        filelist.append(" ");
+        head = head->next_file;
+    }
+    return const_cast<char *>(filelist.c_str());
+}
+

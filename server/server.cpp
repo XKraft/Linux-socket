@@ -16,6 +16,8 @@ char servername[] = "server";
 
 void *client_proc(void* arg);
 void process_msg(Protocol_t* msg, int connfd);
+void SendMsgToOneClient(int connfd, char* text);
+void SendFileToOneClient(int connfd, char* filename, int file_size, char* file_buf);
 
 int main()
 {
@@ -82,9 +84,12 @@ void process_msg(Protocol_t* msg, int connfd)
     uint8_t* buf = NULL;
     char* text = NULL;
     int buflen = 0;
+    char* file_buf = NULL;
+    int file_size = 0;
     Pro_connect_t conn_msg;
     Pro_command_t comm_msg;
     Pro_sendfile_t sfile_msg;
+    Pro_downloadfile_t dwfile_msg;
     switch (msg->id)
     {
     case PRO_ID_CONNECT:
@@ -188,6 +193,13 @@ void process_msg(Protocol_t* msg, int connfd)
             close(connfd);
             pthread_exit((void*)0);
         }
+        if(strcmp(comm_msg.text, "/ls file") == 0)
+        {
+            printf("用户%s请求发送聊天室文件列表\n", comm_msg.username);
+            SendMsgToOneClient(connfd, SendFileList(&room));
+            printf("已向用户%s请求发送聊天室文件列表\n", comm_msg.username);
+            free(comm_msg.username); free(comm_msg.text);
+        }
         break;
 
     case PRO_ID_SENDFILE:
@@ -195,7 +207,45 @@ void process_msg(Protocol_t* msg, int connfd)
         SaveFile(&room, sfile_msg.filename, sfile_msg.file_size, sfile_msg.fileload);
         free(sfile_msg.filename); free(sfile_msg.fileload);
         break;
+
+    case PRO_ID_DOWNLOADFILE:
+        pro_msg_downloadfile_decode(msg, &dwfile_msg);
+        printf("收到用户%s请求发送文件%s", dwfile_msg.username, dwfile_msg.filename);
+        if((file_size = SendFile(&room, dwfile_msg.filename, file_buf)) < 0)
+        {
+            SendMsgToOneClient(connfd, "聊天室文件夹中没有该文件");
+        }
+        else
+        {
+            SendFileToOneClient(connfd, dwfile_msg.filename, file_size, file_buf);
+            printf("已向用户%s发送文件%s\n", dwfile_msg.username, dwfile_msg.filename);
+        }
+        free(dwfile_msg.filename); free(dwfile_msg.username); free(file_buf);
+        break;
+
     default:
         break;
     }
+}
+
+void SendMsgToOneClient(int connfd,  char* text)
+{
+    Protocol_t msg;
+    uint8_t* buf;
+    int buflen = 0;
+    pro_msg_chattext_pack(&msg, servername, text);
+    buflen = pro_msg_send_buf(buf, &msg);
+    write(connfd, buf, buflen);
+    free(buf);
+}
+
+void SendFileToOneClient(int connfd, char* filename, int file_size, char* file_buf)
+{
+    Protocol_t msg;
+    uint8_t* buf;
+    int buflen = 0;
+    pro_msg_sendfile_pack(&msg, filename, file_buf, file_size);
+    buflen = pro_msg_send_buf(buf, &msg);
+    write(connfd, buf, buflen);
+    free(buf);
 }

@@ -21,6 +21,7 @@ bool process_text(char* text, int sockfd, Protocol_t* msg, int buflen, uint8_t* 
 void SendFile(char* file, int sockfd);
 void DownloadFile(char* filename, int sockfd);
 void RequestFileList(char* command, int sockfd);
+void SaveFile(char* filename, int file_size, char* fileload);
 
 int main()
 {
@@ -139,6 +140,7 @@ void process_msg(Protocol_t* msg, int sockfd)
 {
     Pro_chattext_t chat_msg;
     Pro_command_t comm_msg;
+    Pro_sendfile_t sfile_msg;
     switch (msg->id)
     {
     case PRO_ID_CHATTEXT:
@@ -165,6 +167,13 @@ void process_msg(Protocol_t* msg, int sockfd)
             pthread_exit((void *)0);
         }
         break;
+
+    case PRO_ID_SENDFILE:
+        pro_msg_sendfile_decode(msg, &sfile_msg);
+        SaveFile(sfile_msg.filename, sfile_msg.file_size, sfile_msg.fileload);
+        free(sfile_msg.filename); free(sfile_msg.fileload);
+        break;
+    
     default:
         break;
     }
@@ -222,7 +231,7 @@ bool process_text(char* text, int sockfd, Protocol_t* msg, int buflen, uint8_t* 
         {
             printf("请输入想要下载的文件的文件名:");
             char* filename = Str_get();
-            DownloadFile(file, sockfd);
+            DownloadFile(filename, sockfd);
             free(filename); free(text);
         }
         return false;
@@ -243,7 +252,7 @@ void SendFile(char* file, int sockfd)
     for(int i = 0, len = strlen(file); i < filenamelen; ++i)
         filename[i] = file[len - filenamelen + i];
     filename[filenamelen - 1] = '\0';
-    
+    printf("%s\n", filename);
     FILE* fp = fopen(file, "r");
     if(!fp)
     {
@@ -286,7 +295,20 @@ void RequestFileList(char* command, int sockfd)
     uint8_t* buf;
     int Buflen = 0;
     pro_msg_command_pack(&msg, username, command);
-    buflen = pro_msg_send_buf(buf, &msg);
-    write(sockfd, buf, buflen);
+    Buflen = pro_msg_send_buf(buf, &msg);
+    write(sockfd, buf, Buflen);
     free(buf);
+}
+
+void SaveFile(char* filename, int file_size, char* fileload)
+{
+    FILE* fp = fopen(filename, "wb"); 
+    if(!fp)
+    {
+        printf("文件打开错误\n");
+        exit(-1);
+    }
+    fwrite(fileload, sizeof(char), file_size, fp);
+    fclose(fp);
+    printf("文件%s已保存\n", filename);
 }
