@@ -1,9 +1,12 @@
 #ifndef _CHATROOM
 #define _CHATROOM
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string>
+#include <string.h>
 #include <unistd.h>
+#include <iostream>
 using namespace std;
 
 typedef struct user_node
@@ -16,7 +19,6 @@ typedef struct user_node
 typedef struct file_node
 {
     string filename;
-    int len;
     file_node* next_file;
 } file_node;
 
@@ -37,8 +39,8 @@ extern bool add_user(chatroom* room, string name, int userfd);
 extern void SendMsgToAllClients(chatroom* room, uint8_t* buf, int len);
 //删除用户
 extern void remove_user(chatroom* room, string name);
-// //接收&保存文件->将字符数组写入文件
-// extern void save_file(chatroom* room, uint8_t* str, int len, string filename);
+//接收&保存文件->将字符数组写入文件
+extern void SaveFile(chatroom* room, string filename, int file_size, char* fileload);
 // //发送文件->将服务端文件写入字符数组
 // extern uint8_t* send_file(chatroom* room, string filename);
 // //查找文件

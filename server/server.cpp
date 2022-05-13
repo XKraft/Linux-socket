@@ -84,6 +84,7 @@ void process_msg(Protocol_t* msg, int connfd)
     int buflen = 0;
     Pro_connect_t conn_msg;
     Pro_command_t comm_msg;
+    Pro_sendfile_t sfile_msg;
     switch (msg->id)
     {
     case PRO_ID_CONNECT:
@@ -189,6 +190,11 @@ void process_msg(Protocol_t* msg, int connfd)
         }
         break;
 
+    case PRO_ID_SENDFILE:
+        pro_msg_sendfile_decode(msg, &sfile_msg);
+        SaveFile(&room, sfile_msg.filename, sfile_msg.file_size, sfile_msg.fileload);
+        free(sfile_msg.filename); free(sfile_msg.fileload);
+        break;
     default:
         break;
     }

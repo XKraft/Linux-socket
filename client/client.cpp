@@ -18,6 +18,9 @@ bool SendUsername(int sockfd, char* username, uint8_t* buf, int buflen, Protocol
 void *ReadServer(void* arg);
 void process_msg(Protocol_t* msg, int sockfd);
 bool process_text(char* text, int sockfd, Protocol_t* msg, int buflen, uint8_t* buf);
+void SendFile(char* file, int sockfd);
+void DownloadFile(char* filename, int sockfd);
+void RequestFileList(char* command, int sockfd);
 
 int main()
 {
@@ -30,12 +33,6 @@ int main()
 
     printf("请输入用户名:");
     username = Str_get();
-    // while(strlen(username) > 10)
-    // {
-    //     printf("用户名输入错误,请不超过10个英文字符!请重新输入:");
-    //     username = Str_get();
-    // }
-    // //printf("%ld\n", sizeof(*username) * strlen(username));
 
     servaddr.sin_family = AF_INET;
     inet_pton(AF_INET, SERVER_IP, &servaddr.sin_addr);//设置服务器ip地址
@@ -209,6 +206,25 @@ bool process_text(char* text, int sockfd, Protocol_t* msg, int buflen, uint8_t* 
             }
             return true;
         }
+        if(strcmp(text, "/ls file") == 0)
+        {
+            RequestFileList(text, sockfd);
+            free(text);
+        }
+        if(strcmp(text, "/sendfile") == 0)
+        {
+            printf("请输入发送文件所在路径:");
+            char* file = Str_get();
+            SendFile(file, sockfd);
+            free(file); free(text);
+        }
+        if(strcmp(text, "/downloadfile") == 0)
+        {
+            printf("请输入想要下载的文件的文件名:");
+            char* filename = Str_get();
+            DownloadFile(file, sockfd);
+            free(filename); free(text);
+        }
         return false;
     }
 }
@@ -248,7 +264,29 @@ void SendFile(char* file, int sockfd)
     pro_msg_sendfile_pack(&msg, filename, file_buf, file_size);
     Buflen = pro_msg_send_buf(buf, &msg);
     write(sockfd, buf, Buflen);
-    printf("已发送文件%s\n", filename);
+    printf("已上传文件%s\n", filename);
     
-    free(filename); free(file_buf);
+    free(filename); free(file_buf); free(buf);
+}
+
+void DownloadFile(char* filename, int sockfd)
+{
+    Protocol_t msg;
+    uint8_t* buf;
+    int Buflen = 0;
+    pro_msg_downloadfile_pack(&msg, username, filename);
+    Buflen = pro_msg_send_buf(buf, &msg);
+    write(sockfd, buf, Buflen);
+    free(buf);
+}
+
+void RequestFileList(char* command, int sockfd)
+{
+    Protocol_t msg;
+    uint8_t* buf;
+    int Buflen = 0;
+    pro_msg_command_pack(&msg, username, command);
+    buflen = pro_msg_send_buf(buf, &msg);
+    write(sockfd, buf, buflen);
+    free(buf);
 }

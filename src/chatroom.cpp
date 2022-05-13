@@ -1,6 +1,5 @@
 #include"../head/chatroom.h"
-#include <iostream>
-#include <fstream>
+
 //初始化结构体chatroom
 void init_chatroom(chatroom* room)
 {
@@ -13,7 +12,6 @@ void init_chatroom(chatroom* room)
     
     room->file_head = new file_node;
     room->file_head->filename = "";
-    room->file_head->len = 0;
     room->file_head->next_file = NULL;
 }
 
@@ -42,7 +40,6 @@ bool add_user(chatroom* room, string name, int userfd)
         if(p->name == name)
         {
             return false;
-            break;
         }
         head = p;
     }
@@ -51,8 +48,7 @@ bool add_user(chatroom* room, string name, int userfd)
     room->number += 1;
 
     user_node* new_user = new user_node;
-    new_user->name = name;
-    
+    new_user->name = name;   
     new_user->userfd = userfd;
     new_user->next_user = room->user_head->next_user;
     room->user_head->next_user = new_user;
@@ -122,3 +118,51 @@ void remove_user(chatroom* room, string name)
 //     }
 //     return str;
 // }
+
+//将文件保存到服务区的file文件夹，并更新文件目录和目录文件
+void SaveFile(chatroom* room, string filename, int file_size, char* fileload)
+{
+    //将文件保存到本地file文件夹
+    char* file = (char*)malloc(sizeof(char) * (strlen("./file/") + filename.length()));
+    sprintf(file, "%s%s", "./file/", filename.c_str());
+    FILE* fp = fopen(file, "wb"); 
+    if(!fp)
+    {
+        printf("文件打开错误\n");
+        exit(-1);
+    }
+    fwrite(fileload, sizeof(char), file_size, fp);
+    fclose(fp);
+    printf("文件%s已保存\n", filename);
+
+    //更新聊天室文件目录
+    file_node* head = room->file_head;
+    while(head->next_file)
+    {
+        if(filename == head->next_file->filename)
+            return;
+        head = head->next_file;
+    }
+    file_node* temp = new file_node;
+    temp->filename = filename;
+    temp->next_file = room->file_head->next_file;
+    room->file_head->next_file = temp;
+    head = temp = NULL;
+    
+    //更新文件目录文件
+    fp = fopen("filelist.txt", "w");
+    if(!fp)
+    {
+        printf("文件列表打开错误\n");
+        exit(-1);
+    }
+    head = room->file_head;
+    while(head->next_file)
+    {
+        fprintf(fp, "%s\n", head->next_file->filename);
+        head = head->next_file;
+    }
+    head = NULL;
+    fclose(fp);
+    printf("文件目录已更新\n");
+}

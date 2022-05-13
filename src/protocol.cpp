@@ -1,6 +1,6 @@
 #include"../head/protocol.h"
 
-int pro_msg_send_buf(uint8_t* &buf, Protocol_t* msg)
+int pro_msg_send_buf(uint8_t*& buf, Protocol_t* msg)
 {
     int len = 1 + sizeof(msg->id) + sizeof(msg->username_len) + sizeof(msg->len) + strlen(msg->username) * sizeof(char) / sizeof(uint8_t) + msg->len + 1;
 
@@ -88,7 +88,7 @@ bool pro_msg_parse(uint8_t byte, Protocol_t* msg)
             i = 0;
             if (j < 5 && lenarray[j] != 0)
             {
-                if(j < 3)
+                if (j < 3)
                     if (p)
                     {
                         free(p); p = NULL;
@@ -121,7 +121,7 @@ void pro_msg_connect_pack(Protocol_t* msg, char* username)
 }
 bool pro_msg_connect_decode(Protocol_t* msg, Pro_connect_t* _msg)
 {
-    if(msg->id == PRO_ID_CONNECT)
+    if (msg->id == PRO_ID_CONNECT)
     {
         _msg->username = msg->username;
         _msg->username = (char*)realloc(_msg->username, msg->username_len + 1);
@@ -142,16 +142,16 @@ void pro_msg_answer_pack(Protocol_t* msg, char* username, bool answer)
 }
 bool pro_msg_answer_decode(Protocol_t* msg, Pro_answer_t* _msg)
 {
-    if(msg->id == PRO_ID_ANSWER)
+    if (msg->id == PRO_ID_ANSWER)
     {
         _msg->answer = (bool)(*msg->load);
-        if(msg->username)
+        if (msg->username)
         {
             free(msg->username); msg->username = NULL;
         }
-        if(msg->load)
+        if (msg->load)
         {
-            free(msg->load); msg->load =NULL;
+            free(msg->load); msg->load = NULL;
         }
         return true;
     }
@@ -168,7 +168,7 @@ void pro_msg_chattext_pack(Protocol_t* msg, char* username, char* text)
 }
 bool pro_msg_chattext_decode(Protocol_t* msg, Pro_chattext_t* _msg)
 {
-    if(msg->id == PRO_ID_CHATTEXT)
+    if (msg->id == PRO_ID_CHATTEXT)
     {
         _msg->username = msg->username;
         _msg->username = (char*)realloc(_msg->username, msg->username_len + 1);
@@ -191,7 +191,7 @@ void pro_msg_command_pack(Protocol_t* msg, char* username, char* text)
 }
 bool pro_msg_command_decode(Protocol_t* msg, Pro_command_t* _msg)
 {
-    if(msg->id == PRO_ID_COMMAND)
+    if (msg->id == PRO_ID_COMMAND)
     {
         _msg->username = msg->username;
         _msg->username = (char*)realloc(_msg->username, msg->username_len + 1);
@@ -224,4 +224,27 @@ bool pro_msg_sendfile_decode(Protocol_t* msg, Pro_sendfile_t* _msg)
         return true;
     }
     return 0;
+}
+
+void pro_msg_downloadfile_pack(Protocol_t* msg, char* username, char* filename)
+{
+    msg->id = PRO_ID_DOWNLOADFILE;
+    msg->username = username;
+    msg->username_len = strlen(username);
+    msg->load = (uint8_t*)filename;
+    msg->len = strlen(filename) * sizeof(char) / sizeof(uint8_t);
+}
+bool pro_msg_downloadfile_decode(Protocol_t* msg, Pro_downloadfile_t* _msg)
+{
+    if (msg->id == PRO_ID_DOWNLOADFILE)
+    {
+        _msg->username = msg->username;
+        _msg->username = (char*)realloc(_msg->username, msg->username_len + 1);
+        _msg->username[msg->username_len] = '\0';
+        _msg->filename = (char*)msg->load;
+        _msg->filename = (char*)realloc(_msg->filename, msg->len * sizeof(uint8_t) / sizeof(char) + 1);
+        _msg->filename[msg->len * sizeof(uint8_t) / sizeof(char)] = '\0';
+        return true;
+    }
+    return false;
 }
