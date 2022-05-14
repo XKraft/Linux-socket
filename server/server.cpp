@@ -23,7 +23,7 @@
 // 6.处理用户的退出请求
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define SERVER_IP "10.0.0.2" //ip地址
+#define SERVER_IP "192.168.43.208" //ip地址
 #define SERVER_PORT 3000 //端口号
 
 //全局变量
@@ -45,7 +45,8 @@ int main()
 
     //TCP协议
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);//设置ip地址，使用这个宏定义好像可以自动分配，如果到时候不行的话可以手动填一下（字符串）
+    //servaddr.sin_addr.s_addr = htonl(INADDR_ANY);//设置ip地址，使用这个宏定义好像可以自动分配，如果到时候不行的话可以手动填一下（字符串）
+    inet_pton(AF_INET, SERVER_IP, &servaddr.sin_addr.s_addr);
     servaddr.sin_port = htons(SERVER_PORT);//设置端口号
 
     if (-1 == (sockfd = socket(AF_INET, SOCK_STREAM, 0)))
